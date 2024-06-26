@@ -52,7 +52,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libigl)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../polyscope/ "polyscope")
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/polyscope/ "polyscope")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../ "hmsh")
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE polyscope igl::core hmsh)

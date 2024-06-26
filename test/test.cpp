@@ -11,7 +11,7 @@ using namespace pddg;
 
 TEST(hmsh, check_graph_structure) {
     //TODO: Use testcase submodule repo & replace to relative path...
-    std::string directory = "/Users/komietty/dev/models/";
+    std::string directory = "/Users/saki/dev/models/";
     std::vector<std::string> pathes = {
             "tetrahedron.obj",
             "beetle-alt.obj",
@@ -32,6 +32,18 @@ TEST(hmsh, check_graph_structure) {
         MatXi EF;
         igl::edge_topology(V, F, EV, FE, EF);
 
+        //--- check corner structure ---//
+        for (Face f: hmsh->faces) {
+        for (Half h: f.adjHalfs()) {
+            ASSERT_EQ(h.crnr().face().id, f.id);
+        }}
+
+        for (Vert v: hmsh->verts) {
+        for (Half h: v.adjHalfs()) {
+            if (h.isBoundary()) continue;
+            ASSERT_EQ(h.next().crnr().vert().id, v.id);
+        }}
+
         ASSERT_LT((EV - hmsh->edge2vert).norm(), 1e-10);
         ASSERT_LT((EF - hmsh->edge2face).norm(), 1e-10);
         ASSERT_LT((FE - hmsh->face2edge).norm(), 1e-10);
@@ -40,14 +52,14 @@ TEST(hmsh, check_graph_structure) {
 
 TEST(hmsh, check_properties) {
     //TODO: Use testcase submodule repo & replace to relative path...
-    std::string directory = "/Users/komietty/dev/models/";
+    std::string directory = "/Users/saki/dev/models/";
     std::vector<std::string> pathes = {
             "tetrahedron.obj",
             "beetle-alt.obj",
             "lilium.obj",
             "bunny.obj",
     };
-    for (auto path : pathes) {
+    for (auto& path : pathes) {
         MatXd V;
         MatXi F;
         igl::readOBJ(directory + path, V, F);

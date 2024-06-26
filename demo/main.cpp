@@ -1,5 +1,10 @@
 #include <memory>
 #include <igl/readOBJ.h>
+#include <igl/readOFF.h>
+#include <igl/cotmatrix.h>
+#include <igl/invert_diag.h>
+#include <igl/massmatrix.h>
+#include <igl/principal_curvature.h>
 #include <polyscope/polyscope.h>
 #include <polyscope/curve_network.h>
 #include <polyscope/surface_mesh.h>
@@ -25,6 +30,23 @@ int main(int argc, char *argv[]) {
     auto ps = polyscope::registerSurfaceMesh("mesh", hmsh->pos, hmsh->idx);
 
     /*--- visuailize curvature ---*/
+
+    { //--- another curvature definition by panozzo 2010 ---//
+        /*
+        MatXd HN;
+        SprsD L, M, Minv;
+        igl::cotmatrix(V, F, L);
+        igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_VORONOI, M);
+        igl::invert_diag(M, Minv);
+        HN = -Minv * (L * V);
+        MatXd PD1, PD2;
+        VecXd PV1, PV2;
+        igl::principal_curvature(V, F, PD1, PD2, PV1, PV2);
+        VecXd H1 = HN.rowwise().norm();
+        VecXd H2 = 0.5 * (PV1 + PV2);
+        VecXd K = PV1.array() * PV2.array();
+         */
+    }
     ps->setSurfaceColor({0, 10./ 255., 27./ 255.});
     ps->addVertexScalarQuantity("Gaussian Curvature", hmsh->angleDefect);
     ps->addVertexScalarQuantity("Mean Curvature", hmsh->scalarMeanCurvature);

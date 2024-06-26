@@ -6,10 +6,11 @@
 
 namespace pddg {
 struct Hmsh;
+struct Half;
 struct Vert;
 struct Edge;
 struct Face;
-struct Half;
+struct Crnr;
 struct AdjVH;
 struct AdjFH;
 struct AdjLH;
@@ -52,6 +53,12 @@ struct Vert : Elem {
     AdjIter<AdjVH> adjHalfs(Half h, bool ccw = true);
 };
 
+struct Crnr : Elem {
+    [[nodiscard]] inline Half half() const;
+    [[nodiscard]] inline Vert vert() const;
+    [[nodiscard]] inline Face face() const;
+};
+
 struct Loop : Elem {
     [[nodiscard]] inline Half half() const;
     AdjIter<AdjLH> adjHalfs(bool ccw = true);
@@ -65,6 +72,7 @@ struct Half : Elem {
     [[nodiscard]] inline Vert head() const;
     [[nodiscard]] inline Edge edge() const;
     [[nodiscard]] inline Face face() const;
+    [[nodiscard]] inline Crnr crnr() const;
     [[nodiscard]] inline double len() const;
     [[nodiscard]] inline double cot() const;
     [[nodiscard]] inline double varg() const;
@@ -83,12 +91,14 @@ struct Hmsh {
     int nE;
     int nH;
     int nL;
+    int nC;
     int nEularChars;
 
     std::vector<int> vert2half;
     std::vector<int> edge2half;
     std::vector<int> face2half;
     std::vector<int> loop2half;
+    std::vector<int> crnr2half;
     std::vector<int> next;
     std::vector<int> prev;
     std::vector<int> twin;
@@ -96,12 +106,14 @@ struct Hmsh {
     std::vector<int> head;
     std::vector<int> edge;
     std::vector<int> face;
+    std::vector<int> crnr;
     std::vector<bool> isBV;
     std::vector<Half> halfs;
     std::vector<Vert> verts;
     std::vector<Edge> edges;
     std::vector<Face> faces;
     std::vector<Loop> loops;
+    std::vector<Crnr> crnrs;
     MatXd pos;
     MatXi idx;
     MatXi edge2vert;
@@ -145,14 +157,22 @@ Vert Half::tail() const { return {m->tail[id], m}; }
 Vert Half::head() const { return {m->head[id], m}; }
 Edge Half::edge() const { return {m->edge[id], m}; }
 Face Half::face() const { return {m->face[id], m}; }
+Crnr Half::crnr() const { return {m->crnr[id], m}; }
+
 Half Vert::half() const { return {m->vert2half[id], m}; }
 Half Edge::half() const { return {m->edge2half[id], m}; }
 Half Face::half() const { return {m->face2half[id], m}; }
 Half Loop::half() const { return {m->loop2half[id], m}; }
+
+Half Crnr::half() const { return Half{m->crnr2half[id], m}; }
+Vert Crnr::vert() const { return Half{m->crnr2half[id], m}.prev().tail(); }
+Face Crnr::face() const { return Half{m->crnr2half[id], m}.face(); }
+
 Vert Edge::v0() const { return {m->edge2vert(id, 0), m}; }
 Vert Edge::v1() const { return {m->edge2vert(id, 1), m}; }
 Face Edge::f0() const { return {m->edge2face(id, 0), m}; }
 Face Edge::f1() const { return {m->edge2face(id, 1), m}; }
+
 bool Half::isCanonical() const { return edge().half().id == id; }
 bool Half::isBoundary()  const { return face().id == -1; }
 bool Vert::isBoundary()  const { return m->isBV[id]; }
@@ -224,17 +244,20 @@ Hmsh::Hmsh(const MatXd& V, const MatXi& F, MeshType type) {
     nF = static_cast<int>(idx.rows());
     nE = static_cast<int>(edge2vert.rows());
     nH = static_cast<int>(edge2vert.rows() * 2);
+    nC = nF * 3;
     nEularChars = nV - nE + nF;
     vert2half.assign(nV, -1);
     edge2half.assign(nE, -1);
     face2half.assign(nF, -1);
+    crnr2half.assign(nC, -1);
+    next.assign(nH, -1);
+    prev.assign(nH, -1);
+    twin.assign(nH, -1);
     head.assign(nH, -1);
     tail.assign(nH, -1);
     edge.assign(nH, -1);
     face.assign(nH, -1);
-    next.assign(nH, -1);
-    prev.assign(nH, -1);
-    twin.assign(nH, -1);
+    crnr.assign(nH, -1);
 
     int nP = static_cast<int>(idx.cols());
     auto pair = [&](int a, int b) { twin[a] = b; twin[b] = a; };
@@ -301,6 +324,21 @@ Hmsh::Hmsh(const MatXd& V, const MatXi& F, MeshType type) {
     for (int iV = 0; iV < nV; ++iV) verts.emplace_back(Vert{iV, this});
     for (int iE = 0; iE < nE; ++iE) edges.emplace_back(Edge{iE, this});
     for (int iH = 0; iH < nH; ++iH) halfs.emplace_back(Half{iH, this});
+    for (int iC = 0; iC < nC; ++iC) crnrs.emplace_back(Crnr{iC, this});
+
+    /*--- setup crnr_half & half_crnr ---*/
+    for (int iF = 0; iF < nF; ++iF) {
+    for (int it = 0; it < 3;  ++it) {
+        int vid = F(iF, it);
+        int cid = iF * 3 + it;
+        Half hc = halfs[face2half[iF]];
+        for (Half h: {hc, hc.next(), hc.prev()}) {
+            if (h.tail().id != vid && h.head().id != vid) {
+                crnr2half[cid] = h.id;
+                crnr[h.id] = cid;
+            }
+        }
+    }}
 
     if (type == MeshType::FullFeature) {
         vertNormal.resize(nV, 3);
