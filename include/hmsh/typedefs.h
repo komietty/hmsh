@@ -7,9 +7,12 @@ namespace pddg {
 constexpr double PI = M_PI;
 constexpr double TwoPI = 2 * M_PI;
 using complex = std::complex<double>;
+using Row2i = Eigen::RowVector2i;
 using Row2d = Eigen::RowVector2d;
 using Row3i = Eigen::RowVector3i;
 using Row3d = Eigen::RowVector3d;
+using Mat2i = Eigen::Matrix2i;
+using Mat2d = Eigen::Matrix2d;
 using Vec3d = Eigen::Matrix<double, 3, 1>;
 using VecXi = Eigen::Matrix<int, Eigen::Dynamic, 1>;
 using VecXb = Eigen::Matrix<bool, Eigen::Dynamic, 1>;
